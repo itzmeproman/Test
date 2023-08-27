@@ -25,7 +25,7 @@ bot_token = "6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c"
 # Initialize the Bot instance
 bot = Bot(token=bot_token)
 
-updater = Updater(token=6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c, update_queue=queue.Queue())
+updater = Updater(token=6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c , update_queue=queue.Queue())
 dispatcher = updater.dispatcher
 
 def start(update: Update, context: CallbackContext):
