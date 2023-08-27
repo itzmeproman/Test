@@ -18,9 +18,9 @@ video_codec = "libx264"
 encoding_speed = "ultrafast"  # FFmpeg preset
 
 # Bot token and updater initialization
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = "6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c"
 # Your Telegram bot token
-bot_token = "YOUR_BOT_TOKEN"
+bot_token = "6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c"
 
 # Initialize the Bot instance
 bot = Bot(token=bot_token)
