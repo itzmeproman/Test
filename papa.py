@@ -109,8 +109,10 @@ def main():
     codec_handler = CommandHandler('codec', codec)
     restart_handler = CommandHandler('restart', restart)
     cancel_handler = CommandHandler('cancel', cancel)
-    process_video_handler = MessageHandler(Filters.video, process_video)
+    process_video_handler = MessageHandler(Filters.video(), process_video)
     process_image_handler = MessageHandler(Filters.photo, process_image)
+
+
 
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(help_handler)
