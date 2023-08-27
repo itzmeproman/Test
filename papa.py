@@ -2,7 +2,7 @@ import os
 import subprocess
 import time
 from datetime import datetime
-from telegram import Update bot
+from telegram import Update, Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext, filters
 
 
@@ -25,7 +25,7 @@ bot_token = "YOUR_BOT_TOKEN"
 # Initialize the Bot instance
 bot = Bot(token=bot_token)
 
-updater = Updater(token=TOKEN, use_context=True)
+updater = Updater(bot=bot, use_context=True)
 dispatcher = updater.dispatcher
 
 def start(update: Update, context: CallbackContext):
@@ -115,7 +115,7 @@ def main():
     codec_handler = CommandHandler('codec', codec)
     restart_handler = CommandHandler('restart', restart)
     cancel_handler = CommandHandler('cancel', cancel)
-    process_video_handler = MessageHandler(Filters.video(), process_video)
+    process_video_handler = MessageHandler(Filters.video, process_video)
     process_image_handler = MessageHandler(Filters.photo, process_image)
 
 
