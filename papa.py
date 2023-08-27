@@ -19,6 +19,12 @@ encoding_speed = "ultrafast"  # FFmpeg preset
 
 # Bot token and updater initialization
 TOKEN = "YOUR_BOT_TOKEN"
+# Your Telegram bot token
+bot_token = "YOUR_BOT_TOKEN"
+
+# Initialize the Bot instance
+bot = Bot(token=bot_token)
+
 updater = Updater(token=TOKEN, use_context=True)
 dispatcher = updater.dispatcher
 
