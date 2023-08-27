@@ -24,7 +24,7 @@ bot_token = "6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c"
 # Initialize the Bot instance
 bot = Bot(token=bot_token)
 
-updater = Updater(bot=bot, use_context=True)
+updater = Updater(bot=bot)
 
 
 
