@@ -2,7 +2,7 @@ import os
 import subprocess
 import time
 from datetime import datetime
-from telegram import Update
+from telegram import Update bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext, filters
 
 
