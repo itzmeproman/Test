@@ -7,7 +7,6 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContex
 
 
 
-
 # Global variables
 thumbnail = None
 admins = [123456789]  # Replace with your admin user IDs
@@ -25,7 +24,7 @@ bot_token = "6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c"
 # Initialize the Bot instance
 bot = Bot(token=bot_token)
 
-updater = Updater(bot=bot, update_queue=queue.Queue())
+updater = Updater(bot=bot)
 
 
 dispatcher = updater.dispatcher
