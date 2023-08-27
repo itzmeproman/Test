@@ -1,1 +1,1 @@
-web: papa
+web: papa.py
