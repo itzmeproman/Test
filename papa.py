@@ -1,82 +1,55 @@
-import telebot
+import os
 import subprocess
 import threading
-import os
-import math
-import re
-from pymongo import MongoClient
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-# Telegram Bot Token
-BOT_TOKEN = '6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c'
+# Your bot token
+BOT_TOKEN = "YOUR_BOT_TOKEN"
 
-# MongoDB connection
-MONGODB_URI = 'mongodb+srv://papapandey:itzmeproman@itzmeproman1.obpzbn7.mongodb.net/?retryWrites=true&w=majority'
-client = MongoClient(MONGODB_URI)
-db = client['video_bot_db']
+def start(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text("Welcome to the Video Encoder Bot! Send me a video to convert to 480p.")
 
-# Initialize the bot
-bot = telebot.TeleBot(BOT_TOKEN)
+def process_video(update: Update, context: CallbackContext) -> None:
+    def send_progress_message(chat_id, message, total_steps):
+        for step in range(total_steps + 1):
+            progress = (step / total_steps) * 100
+            context.bot.send_message(chat_id=chat_id, text=f"{message} {progress:.2f}%")
+            threading.Event().wait(1)  # Wait for 1 second
 
-@bot.message_handler(commands=['start'])
-def start_message(message):
-    bot.send_message(message.chat.id, "Welcome to the Video Encoder Bot! Send me a video to convert it to 480p.")
+    video_file = update.message.document.get_file()
+    video_path = video_file.download("input.mp4")
 
-@bot.message_handler(content_types=['video'])
-def handle_video(message):
-    chat_id = message.chat.id
-    bot.send_message(chat_id, "Received your video. Encoding to 480p...")
+    send_progress_message(update.message.chat_id, "Downloading:", 10)  # 10 steps
 
-    # Store video processing information in MongoDB
-    video_data = {
-        'chat_id': chat_id,
-        'status': 'processing',
-        'progress': 0
-    }
-    video_id = db.video_processing.insert_one(video_data).inserted_id
+    output_path = "output.mp4"
+    command = [
+        "ffmpeg", "-i", video_path, "-vf", "scale=-1:480", output_path
+    ]
 
-    # ... (same code as before up to process.wait())
+    subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-total_seconds = None
+    send_progress_message(update.message.chat_id, "Encoding:", 10)  # 10 steps
 
-def update_progress():
-    while True:
-        output = process.stderr.readline()
-        if process.poll() is not None:
-            break
-        if "Duration" in output:
-            # ... (same parsing code as before)
+    with open(output_path, "rb") as f:
+        update.message.reply_video(video=f)
 
-        if "time=" in output:
-            total_seconds = float(re.search(r"\d+", output).group())
-            # ... (same parsing code as before)
+    send_progress_message(update.message.chat_id, "Uploading:", 5)  # 5 steps
 
-            # Update progress in MongoDB
-            db.video_processing.update_one(
-                {'_id': video_id},
-                {'$set': {'progress': progress_percent}}
-            )
-            
-            bot.send_message(chat_id, output)
-
-    threading.Thread(target=update_progress).start()
-
-    process.wait()
-    bot.send_message(chat_id, "Encoding complete! Sending the encoded video...")
-    bot.send_video
-
-
-
-    # Update status in MongoDB
-    db.video_processing.update_one(
-        {'_id': video_id},
-        {'$set': {'status': 'completed'}}
-    )
-
-    # Clean up files and MongoDB entry
+    # Clean up temporary files
     os.remove(video_path)
     os.remove(output_path)
-    db.video_processing.delete_one({'_id': video_id})
+
+def main():
+    updater = Updater(token=BOT_TOKEN, use_context=True)
+    dispatcher = updater.dispatcher
+
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(MessageHandler(Filters.document.mime_type("video/*"), process_video))
+
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == "__main__":
-    bot.polling(none_stop=True)
-            
+    main()
+    
