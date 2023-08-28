@@ -1,1 +1,1 @@
-web: gunicorn papa:bot
+web: gunicorn papa:app
