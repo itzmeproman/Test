@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
 
 # Your bot token
-BOT_TOKEN = "YOUR_BOT_TOKEN"
+BOT_TOKEN = "6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c"
 
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Welcome to the Video Encoder Bot! Send me a video to convert to 480p.")
