@@ -1,140 +1,59 @@
-import os
+import telebot
 import subprocess
-import time
-from datetime import datetime
-from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext, filters
+import threading
+import os
 
+# Telegram Bot Token
+BOT_TOKEN = '6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c'
 
+# Initialize the bot
+bot = telebot.TeleBot(BOT_TOKEN)
 
-# Global variables
-thumbnail = None
-admins = [123456789]  # Replace with your admin user IDs
-processing_file = None
-process_info_message = None
-encode_resolution = "480p"
-video_codec = "libx264"
-encoding_speed = "ultrafast"  # FFmpeg preset
+@bot.message_handler(commands=['start'])
+def start_message(message):
+    bot.send_message(message.chat.id, "Welcome to the Video Encoder Bot! Send me a video to convert it to 480p.")
 
-# Bot token and updater initialization
-TOKEN = "6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c"
-# Your Telegram bot token
-bot_token = "6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c"
+@bot.message_handler(content_types=['video'])
+def handle_video(message):
+    chat_id = message.chat.id
+    bot.send_message(chat_id, "Received your video. Encoding to 480p...")
 
-# Initialize the Bot instance
-bot = Bot(token=bot_token)
+    # Download the video
+    video_info = bot.get_file(message.video.file_id)
+    video_path = os.path.join('downloads', video_info.file_path)
+    video_url = f'https://api.telegram.org/file/bot{BOT_TOKEN}/{video_info.file_path}'
+    subprocess.call(['wget', video_url, '-O', video_path])
 
-updater = Updater(bot=bot)
-
-
-
-dispatcher = updater.dispatcher
-
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Welcome to the Video Encoder Bot!\nOwner name: bankai")
-
-def help_command(update: Update, context: CallbackContext):
-    update.message.reply_text("List of available commands:\n"
-                              "/start - Start the bot\n"
-                              "/help - Show this help message\n"
-                              "/resolution - Change video resolution\n"
-                              "/codec - Change video codec\n"
-                              "/restart - Restart the bot (admin only)\n"
-                              "/cancel - Cancel ongoing encoding process (admin or user only)")
-
-def resolution(update: Update, context: CallbackContext):
-    # Implement resolution change logic
-    pass
-
-def codec(update: Update, context: CallbackContext):
-    # Implement codec change logic
-    pass
-
-def restart(update: Update, context: CallbackContext):
-    # Implement restart logic (admin only)
-    pass
-
-def cancel(update: Update, context: CallbackContext):
-    # Implement cancel logic (admin or user only)
-    pass
-
-def process_video(update: Update, context: CallbackContext):
-    global processing_file, process_info_message
-    video_file = update.message.video.file_id
-    download_start_time = datetime.now()
-    
-    update.message.reply_text("Downloading video...")
-    downloaded_file = context.bot.get_file(video_file)
-    downloaded_file.download('input.mp4')
-    download_end_time = datetime.now()
-    download_duration = download_end_time - download_start_time
-    
-    update.message.reply_text("Download complete.\nEncoding video to {}...".format(encode_resolution))
-    encode_start_time = datetime.now()
-    
-    # FFmpeg command to encode the video
-    ffmpeg_command = [
-        "ffmpeg", "-i", "input.mp4", "-c:v", video_codec, "-preset", encoding_speed,
-        "-vf", "scale=-1:480", "-c:a", "copy", "output.mp4"
+    # Encode the video
+    output_path = os.path.join('outputs', 'output.mp4')
+    command = [
+        'ffmpeg',
+        '-i', video_path,
+        '-vf', 'scale=854:480',
+        '-c:a', 'aac',
+        output_path
     ]
-    subprocess.run(ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    
-    encode_end_time = datetime.now()
-    encode_duration = encode_end_time - encode_start_time
-    
-    update.message.reply_text("Encoding complete.\nUploading encoded video...")
-    upload_start_time = datetime.now()
-    
-    context.bot.send_video(chat_id=update.effective_chat.id, video=open('output.mp4', 'rb'))
-    upload_end_time = datetime.now()
-    upload_duration = upload_end_time - upload_start_time
-    
-    update.message.reply_text("Upload complete.")
-    
-    # Display process times
-    process_info = (
-        f"Process timings:\n"
-        f"Download: {download_duration.seconds}.{download_duration.microseconds}s\n"
-        f"Encoding: {encode_duration.seconds}.{encode_duration.microseconds}s\n"
-        f"Upload: {upload_duration.seconds}.{upload_duration.microseconds}s"
-    )
-    update.message.reply_text(process_info)
 
-    # Clean up temporary files
-    os.remove('input.mp4')
-    os.remove('output.mp4')
+    process = subprocess.Popen(command, stderr=subprocess.PIPE, universal_newlines=True)
 
-def process_image(update: Update, context: CallbackContext):
-    global thumbnail
-    # Process incoming image and set as thumbnail
-    pass
+    # Create a thread to monitor the process and update progress
+    def update_progress():
+        while True:
+            output = process.stderr.readline()
+            if process.poll() is not None:
+                break
+            bot.send_message(chat_id, output)
 
-def main():
-    # Add handlers for different commands and messages
-    start_handler = CommandHandler('start', start)
-    help_handler = CommandHandler('help', help_command)
-    resolution_handler = CommandHandler('resolution', resolution)
-    codec_handler = CommandHandler('codec', codec)
-    restart_handler = CommandHandler('restart', restart)
-    cancel_handler = CommandHandler('cancel', cancel)
-    process_video_handler = MessageHandler(Filters.video, process_video)
-    process_image_handler = MessageHandler(Filters.photo, process_image)
+    threading.Thread(target=update_progress).start()
 
+    process.wait()
+    bot.send_message(chat_id, "Encoding complete! Sending the encoded video...")
+    bot.send_video(chat_id, open(output_path, 'rb'))
 
-
-    dispatcher.add_handler(start_handler)
-    dispatcher.add_handler(help_handler)
-    dispatcher.add_handler(resolution_handler)
-    dispatcher.add_handler(codec_handler)
-    dispatcher.add_handler(restart_handler)
-    dispatcher.add_handler(cancel_handler)
-    dispatcher.add_handler(process_video_handler)
-    dispatcher.add_handler(process_image_handler)
-
-    # Start the bot
-    updater.start_polling()
-    updater.idle()
+    # Clean up files
+    os.remove(video_path)
+    os.remove(output_path)
 
 if __name__ == "__main__":
-    main()
-  
+    bot.polling(none_stop=True)
+    
