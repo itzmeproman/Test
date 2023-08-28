@@ -2,18 +2,16 @@ import os
 import subprocess
 import threading
 import time
+import tgcrypto # Import tgcrypto
 from pyrogram import Client, filters
 from pyrogram.types import Message
 
 # Define the bot token and API keys
-# You should not expose your API keys and bot token in your code
-# Use environment variables or a config file instead
 API_ID = os.environ.get("20210345")
 API_HASH = os.environ.get("11bcb58ae8cfb85168fc1f2f8f4c04c2")
 BOT_TOKEN = os.environ.get("6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c")
 
 # Create a bot instance
-# You should use the API_ID and API_HASH variables here instead of hard-coding them
 bot = Client("video_encoder_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 # Define the download directory and the ffmpeg command
@@ -54,15 +52,46 @@ def encode_video(file_path):
     output_file = os.path.join(DOWNLOAD_DIR, new_file_name)
     # Get the total duration of the video file in seconds
     global total_time
-    # You should convert total_time to float here instead of str
     total_time = float(total_time)
-    # Run the ffmpeg command in a subprocess
-    process = subprocess.Popen(FFMPEG_CMD.format(input=input_file, output=output_file), shell=True, stderr=subprocess.PIPE)
+    
+    # Generate a random key and iv for encryption
+    key = os.urandom(32)
+    iv = os.urandom(16)
+
+    # Read the video file as bytes
+    with open(input_file, "rb") as f:
+        data = f.read()
+
+    # Encrypt the data using tgcrypto AES-256-CTR mode
+    encrypted_data = tgcrypto.ctr256_encrypt(data, key, iv, bytes(1))
+
+    # Write the encrypted data to a temporary file
+    with open("temp.mp4", "wb") as f:
+        f.write(encrypted_data)
+
+    # Run the ffmpeg command in a subprocess on the temporary file
+    process = subprocess.Popen(FFMPEG_CMD.format(input="temp.mp4", output=output_file), shell=True, stderr=subprocess.PIPE)
+    
+    # Delete the temporary file
+    os.remove("temp.mp4")
+
     # Create a thread to update the progress variable
     thread = threading.Thread(target=update_progress, args=(process,))
     thread.start()
     # Wait for the process to complete
     process.wait()
+    
+    # Read the output file as bytes
+    with open(output_file, "rb") as f:
+        data = f.read()
+
+    # Decrypt the data using tgcrypto AES-256-CTR mode
+    decrypted_data = tgcrypto.ctr256_decrypt(data, key, iv, bytes(1))
+
+    # Write the decrypted data to the output file
+    with open(output_file, "wb") as f:
+        f.write(decrypted_data)
+
     # Return the output file path
     return output_file
     
@@ -92,16 +121,11 @@ def video(bot, message):
     os.remove(file_path)
     os.remove(output_file)
 
-# Define a function to generate a progress bar with the current pr
-# You should complete this function by using the progress variable and some string formatting
+# Define a function to generate a progress bar with the current progress
 def progress_bar():
-    # Initialize the progress bar variable
-    bar = ""
-
     # Create a string of 10 characters representing the progress bar
     # Use "#" for filled parts and "-" for empty parts
     bar = "#" * int(progress / 10) + "-" * (10 - int(progress / 10))
-
     # Return the progress bar string with the percentage
     return f"[{bar}] {progress}%"
-
+    
