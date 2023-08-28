@@ -45,7 +45,7 @@ def main():
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(Filters.document.mime_type("video/*"), process_video))
+    dispatcher.add_handler(MessageHandler(filters.document.mime_type("video/*"), process_video))
 
     updater.start_polling()
     updater.idle()
