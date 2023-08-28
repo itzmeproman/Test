@@ -1,8 +1,7 @@
 import os
 import subprocess
 import threading
-from telegram import Update, CallbackContext
-from telegram.ext import MessageHandler, Filters
+from telegram import Update, CallbackContext, types
 
 # Your bot token
 BOT_TOKEN = "6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c"
@@ -10,7 +9,7 @@ BOT_TOKEN = "6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c"
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Welcome to the Video Encoder Bot! Send me a video to convert to 480p.")
 
-def process_video(update: Update, context: CallbackContext) -> None:
+def process_video(update: Update, context: types.CallbackContext) -> None:
     def send_progress_message(chat_id, message, total_steps):
         for step in range(total_steps + 1):
             progress = (step / total_steps) * 100
@@ -32,7 +31,7 @@ def process_video(update: Update, context: CallbackContext) -> None:
     send_progress_message(update.message.chat_id, "Encoding:", 10)  # 10 steps
 
     with open(output_path, "rb") as f:
-        update.message.reply_video(video=f)
+        context.bot.send_video(video=f)
 
     send_progress_message(update.message.chat_id, "Uploading:", 5)  # 5 steps
 
@@ -52,4 +51,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
+    
