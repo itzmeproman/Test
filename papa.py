@@ -12,7 +12,7 @@ API_HASH = os.environ.get("11bcb58ae8cfb85168fc1f2f8f4c04c2")
 BOT_TOKEN = os.environ.get("6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c")
 
 # Create a bot instance
-bot = Client("video_encoder_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+bot = Client("video_encoder_bot", api_id=20210345, api_hash=11bcb58ae8cfb85168fc1f2f8f4c04c2, bot_token=6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c)
 
 # Define the download directory and the ffmpeg command
 DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "downloads/")
