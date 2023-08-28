@@ -1,6 +1,3 @@
-telebot
-ffmpeg-python
-pymongo
-dotenv
-pyrogram
-tgcrypto
+python-telegram-bot==20.4
+httpx~=0.24.1
+ffmpeg
