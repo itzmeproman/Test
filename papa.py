@@ -7,9 +7,9 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 
 # Define the bot token and API keys
-API_ID = os.environ.get("API_ID")
-API_HASH = os.environ.get("API_HASH")
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+API_ID = os.environ.get("20210345")
+API_HASH = os.environ.get("11bcb58ae8cfb85168fc1f2f8f4c04c2")
+BOT_TOKEN = os.environ.get("6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c")
 
 # Create a bot instance
 bot = Client("video_encoder_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
