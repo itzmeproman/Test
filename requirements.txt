@@ -1,3 +1,4 @@
 ffmpeg 
 python-telegram-bot
 pyTelegramBotAPI
+pymongo
