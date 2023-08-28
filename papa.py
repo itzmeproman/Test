@@ -2,6 +2,7 @@ import telebot
 import subprocess
 import threading
 import os
+import math
 
 # Telegram Bot Token
 BOT_TOKEN = '6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c'
@@ -38,17 +39,29 @@ def handle_video(message):
 
     # Create a thread to monitor the process and update progress
     def update_progress():
-        while True:
-            output = process.stderr.readline()
-            if process.poll() is not None:
-                break
-            bot.send_message(chat_id, output)
+    while True:
+        output = process.stderr.readline()
+        if process.poll() is not None:
+            break
+        # Parse the output to find the time duration (you can adjust the pattern as needed)
+        if "Duration" in output:
+            duration_match = re.search(r"Duration: (\d+:\d+:\d+.\d+)", output)
+            if duration_match:
+                duration = duration_match.group(1)
+                duration_parts = duration.split(":")
+                total_seconds = int(duration_parts[0]) * 3600 + int(duration_parts[1]) * 60 + float(duration_parts[2])
+        # Parse the output to find the time progress (you can adjust the pattern as needed)
+        if "time=" in output:
+            time_match = re.search(r"time=(\d+:\d+:\d+.\d+)", output)
+            if time_match:
+                time = time_match.group(1)
+                time_parts = time.split(":")
+                current_seconds = int(time_parts[0]) * 3600 + int(time_parts[1]) * 60 + float(time_parts[2])
+                progress_percent = math.floor((current_seconds / total_seconds) * 100)
+                bot.send_message(chat_id, f"Encoding progress: {progress_percent}%")
 
-    threading.Thread(target=update_progress).start()
-
-    process.wait()
-    bot.send_message(chat_id, "Encoding complete! Sending the encoded video...")
-    bot.send_video(chat_id, open(output_path, 'rb'))
+        bot.send_message(chat_id, output)
+        
 
     # Clean up files
     os.remove(video_path)
