@@ -1,4 +1,3 @@
-# Import the required modules
 import os
 import subprocess
 import threading
@@ -52,7 +51,7 @@ def encode_video(file_path):
     output_file = os.path.join(DOWNLOAD_DIR, new_file_name)
     # Get the total duration of the video file in seconds
     global total_time
-    total_time = float(subprocess.check_output(f'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{input_file}"', shell=True).decode().strip())
+    total_time = str(float(subprocess.check_output(f'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{input_file}"', shell=True).decode().strip()))
     # Run the ffmpeg command in a subprocess
     process = subprocess.Popen(FFMPEG_CMD.format(input=input_file, output=output_file), shell=True, stderr=subprocess.PIPE)
     # Create a thread to update the progress variable
