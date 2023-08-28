@@ -1,1 +1,1 @@
-web: python papa.py
+web: gunicorn papa:bot
