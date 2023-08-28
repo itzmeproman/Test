@@ -1,118 +1,114 @@
 # Import the required modules
 import os
-import telebot
-import ffmpeg
-import pymongo
-from dotenv import load_dotenv
+import subprocess
+import threading
+import time
+from pyrogram import Client, filters
+from pyrogram.types import Message
 
-# Load the environment variables from .env file
-load_dotenv()
+# Define the bot token and API keys
+API_ID = os.environ.get("API_ID")
+API_HASH = os.environ.get("API_HASH")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-# Get the bot token, API ID, API hash and database URL from environment variables
-BOT_TOKEN = os.getenv("6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c")
-API_ID = os.getenv("20210345")
-API_HASH = os.getenv("11bcb58ae8cfb85168fc1f2f8f4c04c2")
-DB_URL = os.getenv("mongodb+srv://papapandey:itzmeproman@itzmeproman1.obpzbn7.mongodb.net/?retryWrites=true&w=majority")
+# Create a bot instance
+bot = Client("video_encoder_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# Create a telebot instance
-bot = telebot.TeleBot(BOT_TOKEN)
+# Define the download directory and the ffmpeg command
+DOWNLOAD_DIR = os.environ.get("DOWNLOAD_DIR", "downloads/")
+FFMPEG_CMD = "ffmpeg -i {input} -c:v libx264 -crf 26 -vf scale=-2:480 {output}"
 
-# Create a mongodb client and connect to the database
-client = pymongo.MongoClient(DB_URL)
-db = client["video_encoder_bot"]
-collection = db["videos"]
+# Define a global variable to store the encoding progress
+progress = 0
 
-# Define a function to encode a video file using ffmpeg
-def encode_video(file_path, output_path):
-    # Set the output resolution to 480p
-    resolution = "480x270"
-    # Create a ffmpeg input object from the file path
-    input = ffmpeg.input(file_path)
-    # Create a ffmpeg output object with the output path and resolution
-    output = ffmpeg.output(input, output_path, vf=f"scale={resolution}")
-    # Run the ffmpeg command and return the process object
-    process = ffmpeg.run_async(output, pipe_stdout=True, pipe_stderr=True)
-    return process
+# Define a function to update the progress variable
+def update_progress(process):
+    global progress
+    while True:
+        # Read the output of the ffmpeg process
+        output = process.stderr.readline().decode()
+        # If the output is empty, break the loop
+        if output == "":
+            break
+        # If the output contains "time=", extract the current time
+        if "time=" in output:
+            time_string = output.split("time=")[1].split()[0]
+            # Convert the current time to seconds
+            current_time = sum(float(x) * 60 ** i for i, x in enumerate(reversed(time_string.split(":"))))
+            # Calculate the progress percentage
+            progress = round((current_time / total_time) * 100, 2)
+        # Sleep for one second
+        time.sleep(1)
 
-# Define a function to get the progress percentage of a process
-def get_progress(process):
-    # Initialize the progress percentage to zero
-    progress = 0
-    # Read the standard output and standard error of the process
-    stdout, stderr = process.communicate()
-    # If there is standard error, parse it for the duration and time information
-    if stderr:
-        stderr = stderr.decode("utf-8")
-        duration = None
-        time = None
-        # Loop through each line of the standard error
-        for line in stderr.split("\n"):
-            # If the line contains "Duration", extract the duration value in seconds
-            if "Duration" in line:
-                duration = line.split(",")[0].split(":")[1:]
-                duration = int(duration[0]) * 3600 + int(duration[1]) * 60 + float(duration[2])
-            # If the line contains "time", extract the time value in seconds
-            if "time" in line:
-                time = line.split("=")[1].split(" ")[0].split(":")
-                time = int(time[0]) * 3600 + int(time[1]) * 60 + float(time[2])
-        # If both duration and time are available, calculate the progress percentage as time / duration * 100
-        if duration and time:
-            progress = round(time / duration * 100, 2)
-    # Return the progress percentage
-    return progress
+# Define a function to encode a video file
+def encode_video(file_path):
+    # Get the file name and extension
+    file_name = os.path.basename(file_path)
+    file_ext = os.path.splitext(file_name)[1]
+    # Generate a new file name with ".480p" suffix
+    new_file_name = file_name.replace(file_ext, f".480p{file_ext}")
+    # Generate the input and output file paths
+    input_file = os.path.join(DOWNLOAD_DIR, file_name)
+    output_file = os.path.join(DOWNLOAD_DIR, new_file_name)
+    # Get the total duration of the video file in seconds
+    global total_time
+    total_time = float(subprocess.check_output(f'ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{input_file}"', shell=True).decode().strip())
+    # Run the ffmpeg command in a subprocess
+    process = subprocess.Popen(FFMPEG_CMD.format(input=input_file, output=output_file), shell=True, stderr=subprocess.PIPE)
+    # Create a thread to update the progress variable
+    thread = threading.Thread(target=update_progress, args=(process,))
+    thread.start()
+    # Wait for the process to complete
+    process.wait()
+    # Return the output file path
+    return output_file
 
-# Define a handler function for the /start command
-@bot.message_handler(commands=["start"])
-def start(message):
+# Define a handler for the /start command
+@bot.on_message(filters.command("start"))
+def start(bot, message):
     # Send a welcome message to the user
-    bot.send_message(message.chat.id, f"Hello {message.from_user.first_name}, I am a video encoder bot. I can convert your videos to 480p resolution using ffmpeg. To use me, just send me a video file and I will do the rest.")
+    message.reply_text("Hello, I am a video encoder bot. I can convert your videos to 480p resolution using ffmpeg. Just send me any video file and I will do the rest.")
 
-# Define a handler function for video messages
-@bot.message_handler(content_types=["video"])
-def video(message):
-    # Send a message to the user that the video is being downloaded
-    bot.send_message(message.chat.id, "Downloading your video...")
-    # Get the file ID of the video message
-    file_id = message.video.file_id
-    # Get the file information of the video message
-    file_info = bot.get_file(file_id)
-    # Get the download link of the video file
-    download_link = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
-    # Download the video file and save it locally with a unique name based on the file ID
-    download_path = f"{file_id}.mp4"
-    bot.download_file(file_info.file_path, download_path)
-    # Send a message to the user that the video has been downloaded and is being encoded
-    bot.send_message(message.chat.id, "Video downloaded. Encoding your video...")
-    # Encode the video file using ffmpeg and get the process object
-    output_path = f"{file_id}_480p.mp4"
-    process = encode_video(download_path, output_path)
-    # Get the progress percentage of the encoding process
-    progress = get_progress(process)
-    # Send a message to the user with the initial progress percentage
-    progress_message = bot.send_message(message.chat.id, f"Encoding progress: {progress}%")
-    # Loop until the encoding process is finished or failed
-    while progress < 100 and process.returncode is None:
-        # Update the progress percentage of the encoding process
-        progress = get_progress(process)
-        # Edit the progress message with the updated progress percentage
-        bot.edit_message_text(f"Encoding progress: {progress}%", message.chat.id, progress_message.message_id)
-    # If the encoding process is successful, send a message to the user that the video has been encoded and is being uploaded
-    if process.returncode == 0:
-        bot.send_message(message.chat.id, "Video encoded. Uploading your video...")
-        # Upload the encoded video file to the user
-        bot.send_video(message.chat.id, open(output_path, "rb"))
-        # Send a message to the user that the video has been uploaded
-        bot.send_message(message.chat.id, "Video uploaded. Enjoy!")
-        # Save the video information to the database
-        collection.insert_one({"user_id": message.from_user.id, "file_id": file_id, "download_path": download_path, "output_path": output_path})
-    # If the encoding process is failed, send a message to the user that an error occurred
-    else:
-        bot.send_message(message.chat.id, "An error occurred while encoding your video. Please try again later.")
-    # Delete the downloaded and encoded video files from the local storage
-    os.remove(download_path)
-    os.remove(output_path)
+# Define a handler for video files
+@bot.on_message(filters.video)
+def video(bot, message):
+    # Send a message to the user indicating the download process
+    message.reply_text("Downloading your video file...")
+    # Download the video file to the download directory
+    file_path = message.download(file_name=DOWNLOAD_DIR)
+    # Send a message to the user indicating the encoding process
+    message.reply_text("Encoding your video file...")
+    # Encode the video file and get the output file path
+    output_file = encode_video(file_path)
+    # Send a message to the user indicating the upload process with a progress bar
+    message.reply_text("Uploading your video file...", reply_markup=progress_bar())
+    # Upload the output file as a video with a thumbnail and a caption
+    message.reply_video(output_file, thumb=file_path, caption=f"Encoded by @video_encoder_bot")
+    # Delete the input and output files from the download directory
+    os.remove(file_path)
+    os.remove(output_file)
 
-# Start polling for updates from Telegram
-bot.polling()
+# Define a function to generate a progress bar with the current progress percentage
+def progress_bar():
+    # Define the symbols for the progress bar
+    fill_char = "█"
+    empty_char = "░"
+    # Define the length of the progress bar
+    bar_length = 10
+    # Calculate the number of filled and empty symbols based on the progress percentage
+    filled = int(progress / 10)
+    empty = bar_length - filled
+    # Generate the progress bar string
+    bar = fill_char * filled + empty_char * empty
+    # Return the progress bar as an inline keyboard with a callback data of "None"
+    return InlineKeyboardMarkup([[InlineKeyboardButton(f"{bar} {progress}%", callback_data="None")]])
 
+# Define a handler for the callback queries
+@bot.on_callback_query()
+def callback(bot, update):
+    # Ignore the callback queries as they are just for showing the progress bar
+    pass
 
+# Run the bot
+bot.run()
+    
