@@ -4,9 +4,15 @@ import threading
 import os
 import math
 import re
+from pymongo import MongoClient
 
 # Telegram Bot Token
 BOT_TOKEN = '6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c'
+
+# MongoDB connection
+MONGODB_URI = 'mongodb+srv://papapandey:itzmeproman@itzmeproman1.obpzbn7.mongodb.net/?retryWrites=true&w=majority'
+client = MongoClient(MONGODB_URI)
+db = client['video_bot_db']
 
 # Initialize the bot
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -20,23 +26,15 @@ def handle_video(message):
     chat_id = message.chat.id
     bot.send_message(chat_id, "Received your video. Encoding to 480p...")
 
-    # Download the video
-    video_info = bot.get_file(message.video.file_id)
-    video_path = os.path.join('downloads', video_info.file_path)
-    video_url = f'https://api.telegram.org/file/bot{BOT_TOKEN}/{video_info.file_path}'
-    subprocess.call(['wget', video_url, '-O', video_path])
+    # Store video processing information in MongoDB
+    video_data = {
+        'chat_id': chat_id,
+        'status': 'processing',
+        'progress': 0
+    }
+    video_id = db.video_processing.insert_one(video_data).inserted_id
 
-    # Encode the video
-    output_path = os.path.join('outputs', 'output.mp4')
-    command = [
-        'ffmpeg',
-        '-i', video_path,
-        '-vf', 'scale=854:480',
-        '-c:a', 'aac',
-        output_path
-    ]
-
-    process = subprocess.Popen(command, stderr=subprocess.PIPE, universal_newlines=True)
+    # ... (same code as before up to process.wait())
 
     def update_progress():
         total_seconds = None
@@ -46,19 +44,16 @@ def handle_video(message):
             if process.poll() is not None:
                 break
             if "Duration" in output:
-                duration_match = re.search(r"Duration: (\d+:\d+:\d+.\d+)", output)
-                if duration_match:
-                    duration = duration_match.group(1)
-                    duration_parts = duration.split(":")
-                    total_seconds = int(duration_parts[0]) * 3600 + int(duration_parts[1]) * 60 + float(duration_parts[2])
+                # ... (same parsing code as before)
+
             if "time=" in output and total_seconds is not None:
-                time_match = re.search(r"time=(\d+:\d+:\d+.\d+)", output)
-                if time_match:
-                    time = time_match.group(1)
-                    time_parts = time.split(":")
-                    current_seconds = int(time_parts[0]) * 3600 + int(time_parts[1]) * 60 + float(time_parts[2])
-                    progress_percent = math.floor((current_seconds / total_seconds) * 100)
-                    bot.send_message(chat_id, f"Encoding progress: {progress_percent}%")
+                # ... (same parsing code as before)
+
+                # Update progress in MongoDB
+                db.video_processing.update_one(
+                    {'_id': video_id},
+                    {'$set': {'progress': progress_percent}}
+                )
                     
             bot.send_message(chat_id, output)
 
@@ -68,9 +63,17 @@ def handle_video(message):
     bot.send_message(chat_id, "Encoding complete! Sending the encoded video...")
     bot.send_video(chat_id, open(output_path, 'rb'))
 
-    # Clean up files
+    # Update status in MongoDB
+    db.video_processing.update_one(
+        {'_id': video_id},
+        {'$set': {'status': 'completed'}}
+    )
+
+    # Clean up files and MongoDB entry
     os.remove(video_path)
     os.remove(output_path)
+    db.video_processing.delete_one({'_id': video_id})
 
 if __name__ == "__main__":
     bot.polling(none_stop=True)
+            
