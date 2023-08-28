@@ -2,7 +2,7 @@ import os
 import subprocess
 import threading
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
 
 # Your bot token
 BOT_TOKEN = "YOUR_BOT_TOKEN"
