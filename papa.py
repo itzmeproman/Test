@@ -36,25 +36,25 @@ def handle_video(message):
 
     # ... (same code as before up to process.wait())
 
-    def update_progress():
-        total_seconds = None
+def update_progress():
+    total_seconds = None
 
-        while True:
-            output = process.stderr.readline()
-            if process.poll() is not None:
-                break
-            if "Duration" in output:
-                # ... (same parsing code as before)
+    while True:
+        output = process.stderr.readline()
+        if process.poll() is not None:
+            break
+        if "Duration" in output:
+            # ... (same parsing code as before)
 
-            if "time=" in output and total_seconds is not None:
-                # ... (same parsing code as before)
+        if "time=" in output and total_seconds is not None:
+            # ... (same parsing code as before)
 
-                # Update progress in MongoDB
-                db.video_processing.update_one(
-                    {'_id': video_id},
-                    {'$set': {'progress': progress_percent}}
-                )
-                
+            # Update progress in MongoDB
+            db.video_processing.update_one(
+                {'_id': video_id},
+                {'$set': {'progress': progress_percent}}
+            )
+            
             bot.send_message(chat_id, output)
 
     threading.Thread(target=update_progress).start()
@@ -62,6 +62,8 @@ def handle_video(message):
     process.wait()
     bot.send_message(chat_id, "Encoding complete! Sending the encoded video...")
     bot.send_video(chat_id, open(output_path, 'rb'))
+
+
 
     # Update status in MongoDB
     db.video_processing.update_one(
