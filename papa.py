@@ -54,7 +54,7 @@ def handle_video(message):
                     {'_id': video_id},
                     {'$set': {'progress': progress_percent}}
                 )
-                    
+                
             bot.send_message(chat_id, output)
 
     threading.Thread(target=update_progress).start()
