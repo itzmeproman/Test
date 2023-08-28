@@ -3,3 +3,4 @@ httpx~=0.24.1
 ffmpeg
 pyrogram 
 tgcrypto==1.2.2
+gunicorn
