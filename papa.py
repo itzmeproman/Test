@@ -6,7 +6,7 @@ import math
 import re
 
 # Telegram Bot Token
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
+BOT_TOKEN = '6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c'
 
 # Initialize the bot
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -74,4 +74,3 @@ def handle_video(message):
 
 if __name__ == "__main__":
     bot.polling(none_stop=True)
-
