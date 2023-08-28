@@ -1,8 +1,8 @@
 import os
 import subprocess
 import threading
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
+from telegram import Update, CallbackContext
+from telegram.ext import MessageHandler, Filters
 
 # Your bot token
 BOT_TOKEN = "6154222206:AAFxkaTRgMI52biIT3m4qAUDwsWIySnoY2c"
@@ -45,7 +45,7 @@ def main():
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(filters.DOCUMENT.mime_type("video/*"), process_video))
+    dispatcher.add_handler(MessageHandler(Filters.types.Document.mime_type("video/*"), process_video))
 
     updater.start_polling()
     updater.idle()
