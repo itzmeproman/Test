@@ -45,11 +45,11 @@ def main():
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(filters.document.mime_type("video/*"), process_video))
+    dispatcher.add_handler(MessageHandler(filters.DOCUMENT.mime_type("video/*"), process_video))
 
     updater.start_polling()
     updater.idle()
 
 if __name__ == "__main__":
     main()
-    
+
