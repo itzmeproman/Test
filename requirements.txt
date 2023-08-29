@@ -4,3 +4,5 @@ ffmpeg
 pyrogram 
 tgcrypto==1.2.2
 gunicorn
+telebot==0.0.6
+httpx==0.24.1
