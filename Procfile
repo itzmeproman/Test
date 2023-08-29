@@ -1,1 +1,1 @@
-web: gunicorn papa:app
+worker: python papa.py
